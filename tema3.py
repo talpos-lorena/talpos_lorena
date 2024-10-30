@@ -51,3 +51,12 @@ if numar_guias_ramas>0:
 else:
      print("Mai este guias: False")
 
+mancare_ieftina=[]
+for mancare_pret in preturi:
+    pret_mancare=mancare_pret[1]
+    nume_mancare=mancare_pret[0]
+    if pret_mancare <=7:
+        mancare_ieftina.append(nume_mancare)
+print(mancare_ieftina)
+print(len(mancare_ieftina))
+
