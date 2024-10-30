@@ -60,3 +60,4 @@ for mancare_pret in preturi:
 print(mancare_ieftina)
 print(len(mancare_ieftina))
 
+
