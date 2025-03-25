@@ -1,184 +1,132 @@
 import random
 import csv
-import time
-import tkinter as tk
-from tkinter import filedialog, ttk
 from collections import defaultdict
 
-# Tabel hash pentru stocarea CNP-urilor
-hash_table = [[] for _ in range(1009)]  # 1009 este un număr prim pentru a evita coliziunile
+judete = [
+    (1, 'Alba'), (2, 'Arad'), (3, 'Arges'), (4, 'Bacau'), (5, 'Bihor'), (6, 'Bistrita-Nasaud'),
+    (7, 'Botosani'), (8, 'Brasov'), (9, 'Braila'), (10, 'Buzau'), (11, 'Caras-Severin'), (12, 'Cluj'),
+    (13, 'Constanta'), (14, 'Covasna'), (15, 'Dambovita'), (16, 'Dolj'), (17, 'Galati'), (18, 'Gorj'),
+    (19, 'Harghita'), (20, 'Hunedoara'), (21, 'Ialomita'), (22, 'Iasi'), (23, 'Ilfov'), (24, 'Maramures'),
+    (25, 'Mehedinti'), (26, 'Mures'), (27, 'Neamt'), (28, 'Olt'), (29, 'Prahova'), (30, 'Satu Mare'),
+    (31, 'Salaj'), (32, 'Sibiu'), (33, 'Suceava'), (34, 'Teleorman'), (35, 'Timis'), (36, 'Tulcea'),
+    (37, 'Vaslui'), (38, 'Valcea'), (39, 'Vrancea'), (40, 'Bucuresti'), (41, 'Calarasi'), (42, 'Giurgiu')
+]
 
+judete_dict = {code: name for code, name in judete}
 
-def generate_cnp():
-    """Generează un CNP valid conform regulilor din România."""
-    year = random.randint(1900, 2022)
-    month = random.randint(1, 12)
-    day = random.randint(1, 28)
-    county = random.choice([x for x in range(1, 53) if x not in [47, 48, 49, 50, 51]])
-    unique_id = random.randint(100, 999)
-    control_digit = random.randint(0, 9)
+def genereaza_cnp():
+    sex = random.choice([1, 2, 3, 4])
+    an = random.randint(1920, 2022) % 100
+    luna = random.randint(1, 12)
+    zi = random.randint(1, 31)
+    judet = random.randint(1, 42)
+    nr_ordine = random.randint(0, 999)
+    cnp_fara_control = f"{sex}{an:02d}{luna:02d}{zi:02d}{judet:02d}{nr_ordine:03d}"
+    control = calcul_cifra_control(cnp_fara_control)
+    return cnp_fara_control + str(control), sex, an, judet
 
-    if year >= 2000:
-        gender = random.choice([5, 6])
-    elif year >= 1900:
-        gender = random.choice([1, 2])
+def calcul_cifra_control(cnp_fara_control):
+    coeficienti = [2, 7, 9, 1, 4, 6, 8, 5, 3, 2, 7, 9]
+    suma = sum(int(cnp_fara_control[i]) * coeficienti[i] for i in range(12))
+    rest = suma % 11
+    return rest if rest != 10 else 1
+
+def genereaza_nume():
+    prenume = random.choice(["Andrei", "Maria", "Ion", "Elena", "George", "Ioana", "Mihai", "Ana", "Vasile", "Gabriela"])
+    nume = random.choice(["Popescu", "Ionescu", "Georgescu", "Dumitrescu", "Constantin", "Marin", "Radu", "Munteanu", "Popa", "Stan"])
+    return f"{prenume} {nume}"
+
+def calculeaza_varsta(an_nastere):
+    if an_nastere < 22:
+        an_nastere += 2000
     else:
-        gender = random.choice([3, 4])
+        an_nastere += 1900
+    varsta = 2025 - an_nastere
+    return varsta
 
-    cnp = f"{gender}{str(year)[-2:]}{month:02}{day:02}{county:02}{unique_id}{control_digit}"
-    return cnp
-
-
-def generate_name():
-    """Generează un nume aleatoriu."""
-    first_names = ["Andrei", "Maria", "Ion", "Elena", "Alex", "Diana", "Cristian", "Ana"]
-    last_names = ["Popescu", "Ionescu", "Dumitrescu", "Stoica", "Georgescu", "Radu"]
-    return f"{random.choice(first_names)} {random.choice(last_names)}"
-
-
-def hash_function(cnp):
-    """Funcția de hash: folosește suma cifrelor CNP-ului modulo 1009."""
-    return sum(int(digit) for digit in cnp) % 1009
-
-
-def insert_in_hash_table(cnp):
-    """Inseră un CNP în tabelul hash."""
-    index = hash_function(cnp)
-    hash_table[index].append(cnp)
-
-
-def generate_csv(file_name, count=1000000):
-    """Generează un fișier CSV cu CNP-uri și nume."""
-    with open(file_name, 'w', newline='') as file:
+def genereaza_csv(numar_cnpuri=1000000):
+    with open("cnpuri.csv", mode='w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
-        writer.writerow(["CNP", "Nume"])
-        for _ in range(count):
-            cnp = generate_cnp()
-            name = generate_name()
-            writer.writerow([cnp, name])
-            insert_in_hash_table(cnp)
+        writer.writerow(["CNP", "Nume", "Sex", "An", "Judet", "JudetNume"])
+        for _ in range(numar_cnpuri):
+            cnp, sex, an, judet = genereaza_cnp()
+            nume = genereaza_nume()
+            judet_nume = judete_dict.get(judet, "Necunoscut")
+            writer.writerow([cnp, nume, sex, an, judet, judet_nume])
 
+genereaza_csv()
 
-def analyze_population(file_name):
-    """Analizează distribuția populației după județ, vârstă și sex."""
-    county_names = {
-        1: "Alba", 2: "Arad", 3: "Argeș", 4: "Bacău", 5: "Bihor", 6: "Bistrița-Năsăud", 7: "Botoșani",
-        8: "Brașov", 9: "Brăila", 10: "Buzău", 11: "Caraș-Severin", 12: "Cluj", 13: "Constanța", 14: "Covasna",
-        15: "Dâmbovița", 16: "Dolj", 17: "Galați", 18: "Gorj", 19: "Harghita", 20: "Hunedoara", 21: "Ialomița",
-        22: "Iași", 23: "Ilfov", 24: "Maramureș", 25: "Mehedinți", 26: "Mureș", 27: "Neamț", 28: "Olt",
-        29: "Prahova", 30: "Satu Mare", 31: "Sălaj", 32: "Sibiu", 33: "Suceava", 34: "Teleorman", 35: "Timiș",
-        36: "Tulcea", 37: "Vaslui", 38: "Vâlcea", 39: "Vrancea", 40: "București", 41: "București S.1",
-        42: "București S.2", 43: "București S.3", 44: "București S.4", 45: "București S.5", 46: "București S.6",
-        51: "Călărași", 52: "Giurgiu"
-    }
-    county_distribution = defaultdict(int)
-    age_0_18 = 0
-    age_18_55 = 0
-    age_55_122 = 0
-    male_count = 0
-    female_count = 0
+class HashTable:
+    def __init__(self, size):
+        self.size = size
+        self.table = [[] for _ in range(size)]
 
-    with open(file_name, 'r') as file:
-        reader = csv.reader(file)
-        next(reader)  # Skip header
-        for row in reader:
-            cnp = row[0]
-            year = int(cnp[1:3])
-            county = int(cnp[7:9])
-            gender = int(cnp[0])
+    def hash_function(self, key):
+        return int(key[:8]) % self.size
 
-            # Determinarea anului complet
-            if gender in [1, 2]:
-                year += 1900
-            elif gender in [5, 6]:
-                year += 2000
+    def insert(self, key, value):
+        hash_index = self.hash_function(key)
+        self.table[hash_index].append((key, value))
 
-            age = 2022 - year
-            county_distribution[county] += 1
+    def search(self, key):
+        hash_index = self.hash_function(key)
+        for i, (cnp, nume) in enumerate(self.table[hash_index]):
+            if cnp == key:
+                return i + 1
+        return -1
 
-            if 0 <= age < 18:
-                age_0_18 += 1
-            elif 18 <= age < 55:
-                age_18_55 += 1
-            elif 55 <= age <=122:
-                age_55_122 += 1
+hash_table = HashTable(1000)
 
-            if gender in [1, 5]:
-                male_count += 1
-            elif gender in [2, 6]:
-                female_count += 1
+statistici_sex = {"barbati": 0, "femei": 0}
+statistici_judete = defaultdict(int)
+statistici_varsta = {"1-18": 0, "18-55": 0, "55-102": 0}
 
-    print("Distribuția pe județe:")
-    for county, count in sorted(county_distribution.items()):
-        print(f"{county_names.get(county, 'Necunoscut')}: {count} persoane")
+with open("cnpuri.csv", mode='r', encoding='utf-8') as file:
+    reader = csv.reader(file)
+    next(reader)
+    for row in reader:
+        cnp = row[0]
+        nume = row[1]
+        sex = int(row[2])
+        an = int(row[3])
+        judet = int(row[4])
+        judet_nume = row[5]
 
-    print("Distribuția pe categorii de vârstă:")
-    print(f"Persoane cu vârsta între 0-18 ani: {age_0_18}")
-    print(f"Persoane cu vârsta între 18-55 ani: {age_18_55}")
-    print(f"Persoane cu vârsta între 55-122 ani: {age_55_122}")
-    print(f"Număr bărbați: {male_count}")
-    print(f"Număr femei: {female_count}")
+        varsta = calculeaza_varsta(an)
 
+        if sex in [1, 3, 5, 7]:
+            statistici_sex["barbati"] += 1
+        elif sex in [2, 4, 6, 8]:
+            statistici_sex["femei"] += 1
 
-def search_in_hash_table(cnp):
-    """Căutare secvențială într-un tabel hash pentru a găsi CNP-ul."""
-    index = hash_function(cnp)
-    bucket = hash_table[index]
-    iterations = 0
-    for item in bucket:
-        iterations += 1
-        if item == cnp:
-            return iterations
-    return iterations  # Returnăm numărul de iterații (dacă nu se găsește, iterează pe toată lista)
+        statistici_judete[judet_nume] += 1
 
+        if varsta <= 18:
+            statistici_varsta["1-18"] += 1
+        elif varsta <= 55:
+            statistici_varsta["18-55"] += 1
+        else:
+            statistici_varsta["55-102"] += 1
 
-def analyze_search_performance(count=1000):
-    """Analizează performanța căutărilor a 1000 de CNP-uri."""
-    search_iterations = []
+        hash_table.insert(cnp, nume)
 
-    # Selectăm 1000 de CNP-uri care au fost deja inserate în tabelul hash
-    all_cnp_list = []
-    for bucket in hash_table:
-        all_cnp_list.extend(bucket)  # Adăugăm toate CNP-urile din tabelul hash în listă
+print(f"Numar barbati: {statistici_sex['barbati']}")
+print(f"Numar femei: {statistici_sex['femei']}")
+print("\nNumar persoane pe judete:")
+for judet, numar in statistici_judete.items():
+    print(f"{judet}: {numar} persoane")
+print("\nDistributia pe varste:")
+for categorie, numar in statistici_varsta.items():
+    print(f"{categorie}: {numar} persoane")
 
-    # Verificăm dacă avem suficient de multe CNP-uri pentru a selecta 1000
-    if len(all_cnp_list) < count:
-        print(f"Numărul de CNP-uri inserate în tabel este mai mic decât {count}.")
-        return
+numar_istorii = 1000
+non_empty_buckets = [bucket for bucket in hash_table.table if bucket]
 
-    # Selectăm aleatoriu 1000 de CNP-uri din tabelul hash
-    selected_cnp = random.sample(all_cnp_list, count)
-
-    # Măsurăm numărul de iterații necesar pentru fiecare căutare
-    for cnp in selected_cnp:
-        iterations = search_in_hash_table(cnp)
-        search_iterations.append(iterations)
-
-    # Calculăm statistici relevante
-    avg_iterations = sum(search_iterations) / count
-    max_iterations = max(search_iterations)
-    min_iterations = min(search_iterations)
-
-    print(f"\nPerformanța căutărilor (pentru 1000 de CNP-uri):")
-    print(f"Media numărului de iterații: {avg_iterations:.2f}")
-    print(f"Maximul numărului de iterații: {max_iterations}")
-    print(f"Minimul numărului de iterații: {min_iterations}")
-
-
-def main():
-    file_name = "cnp_data.csv"
-    print("Generare CSV...")
-    generate_csv(file_name)
-
-    print("Analiză populație...")
-    analyze_population(file_name)
-
-    print("Generare și populare hash table cu 1 milion de CNP-uri...")
-    generate_csv(file_name, count=1000000)
-
-    print("Analiză performanță căutări...")
-    analyze_search_performance(count=1000)
-
-
-if __name__ == "__main__":
-    main()
+for _ in range(numar_istorii):
+    if non_empty_buckets:
+        random_bucket = random.choice(non_empty_buckets)
+        random_cnp, _ = random.choice(random_bucket)
+        iterații = hash_table.search(random_cnp)
+        print(f"Cautare CNP: {random_cnp}, numar de iteratii: {iterații}")
+    else:
+        print("Tabelul de hash este gol, nu exista CNP-uri de cautat.")
